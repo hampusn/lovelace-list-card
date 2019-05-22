@@ -1,6 +1,6 @@
 /**
  * ListCard - Custom card for Lovelace UI
- * Prints a list of items from the value of a sensor.
+ * Prints a list of items from the value of an entity.
  * 
  * @class
  */
@@ -17,7 +17,7 @@ class ListCard extends HTMLElement {
     this.root     = null;
 
     this._config = {
-      sensor: null,
+      entity: null,
       fromFormat: 'json',
       maxNumItems: 100,
       height: 'auto',
@@ -50,7 +50,6 @@ class ListCard extends HTMLElement {
    * Updates the styling of this card.
    */
   _updateStyle () {
-    // this._config.height
     const height = this._config.height;
 
     this._style.textContent = `
@@ -103,8 +102,8 @@ class ListCard extends HTMLElement {
    * Updates the content of this card.
    */
   _updateContent () {
-    let sensor = this._hass.states[this._config.sensor];
-    let value = sensor.state;
+    let entity = this._hass.states[this._config.entity];
+    let value = entity.state;
     let format = this._config.fromFormat;
     let lastUpdated = '';
 
@@ -115,7 +114,7 @@ class ListCard extends HTMLElement {
     }
 
     if (this._config.showLastUpdated) {
-      lastUpdated = `<p>${this._formatDateString(sensor.last_updated)}</p>`;
+      lastUpdated = `<p>${this._formatDateString(entity.last_updated)}</p>`;
     }
 
     this._content.innerHTML = `
@@ -134,9 +133,9 @@ class ListCard extends HTMLElement {
    * @param {Object} config 
    */
   setConfig (config) {
-    // A sensor is required for this card to work properly.
-    if (!config.sensor) {
-      throw new Error('Please define a sensor');
+    // An entity is required for this card to work properly.
+    if (!config.entity) {
+      throw new Error('Please define an entity');
     }
 
     // Merge config
