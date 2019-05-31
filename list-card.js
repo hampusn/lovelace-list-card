@@ -23,7 +23,6 @@ class ListCard extends HTMLElement {
       entity: null,
       from_format: 'json',
       max_num_items: 100,
-      height: 'auto',
       title: '',
       item_template: null,
       show_last_updated: true,
@@ -55,13 +54,11 @@ class ListCard extends HTMLElement {
    * Updates the styling of this card.
    */
   _updateStyle () {
-    let height = this._config.height;
     let extraCss = this._config.extra_css ? this._config.extra_css : '';
 
     this._style.textContent = `
       ha-card {
         color: var(--primary-text-color);
-        ${ height !== 'auto' ? `height: ${height};` : '' }
         position: relative;
       }
       ul {
@@ -126,12 +123,12 @@ class ListCard extends HTMLElement {
     let format = this._config.from_format;
     let lastUpdated = '';
 
-    if (format === 'json') {
-      value = JSON.parse(value);
-    } else if (format === 'object') {
-      // value = value;
-    } else if (format) {
-      value = value.split(format);
+    if (typeof value === 'string') {
+      if (format === 'json') {
+        value = JSON.parse(value);
+      } else if (format) {
+        value = value.split(format);
+      }
     }
 
     if (this._config.show_last_updated) {
