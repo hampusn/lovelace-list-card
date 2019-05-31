@@ -11,18 +11,23 @@ class ListCard extends HTMLElement {
   constructor () {
     super();
 
-    this._card    = null;
-    this._content = null;
-    this._style   = null;
-    this.root     = null;
+    this._card         = null;
+    this._content      = null;
+    this._style        = null;
+    this.root          = null;
+    this._itemTemplate = null;
+    this._entityId     = '';
+    this._valuePath    = ['state'];
 
     this._config = {
       entity: null,
-      fromFormat: 'json',
-      maxNumItems: 100,
+      from_format: 'json',
+      max_num_items: 100,
       height: 'auto',
       title: '',
-      showLastUpdated: true
+      item_template: null,
+      show_last_updated: true,
+      extra_css: ''
     };
     this._hass = {};
 
@@ -50,7 +55,8 @@ class ListCard extends HTMLElement {
    * Updates the styling of this card.
    */
   _updateStyle () {
-    const height = this._config.height;
+    let height = this._config.height;
+    let extraCss = this._config.extra_css ? this._config.extra_css : '';
 
     this._style.textContent = `
       ha-card {
@@ -73,6 +79,7 @@ class ListCard extends HTMLElement {
         padding: 0.5em 1em;
         text-align: right;
       }
+      ${extraCss}
     `;
   }
 
@@ -98,28 +105,42 @@ class ListCard extends HTMLElement {
     return `${y}-${m}-${d} ${hh}:${mm}`;
   }
 
+  _getEntityValue (entity, valuePath) {
+    var value = entity;
+
+    valuePath.forEach(function (p) {
+      if (typeof value === 'object' && p in value) {
+        value = value[p];
+      }
+    });
+    
+    return value;
+  }
+
   /**
    * Updates the content of this card.
    */
   _updateContent () {
-    let entity = this._hass.states[this._config.entity];
-    let value = entity.state;
-    let format = this._config.fromFormat;
+    let entity = this._hass.states[this._entityId];
+    let value = this._getEntityValue(entity, this._valuePath);
+    let format = this._config.from_format;
     let lastUpdated = '';
 
     if (format === 'json') {
       value = JSON.parse(value);
+    } else if (format === 'object') {
+      // value = value;
     } else if (format) {
       value = value.split(format);
     }
 
-    if (this._config.showLastUpdated) {
+    if (this._config.show_last_updated) {
       lastUpdated = `<p>${this._formatDateString(entity.last_updated)}</p>`;
     }
 
     this._content.innerHTML = `
       <ul>
-        ${value.slice(0, this._config.maxNumItems).map(v => `<li>${v}</li>`).join("\n")}
+        ${value.slice(0, this._config.max_num_items).map(v => `<li>${this._itemTemplate(v)}</li>`).join("\n")}
       </ul>
       ${lastUpdated}
     `;
@@ -141,8 +162,32 @@ class ListCard extends HTMLElement {
     // Merge config
     this._config = Object.assign({}, this._config, config);
 
+    // 
+    let entityParts = this._config.entity.split('.');
+    this._entityId  = `${entityParts.shift()}.${entityParts.shift()}`;
+    if (entityParts.length > 0) {
+      this._valuePath = entityParts;
+    }
+
     // Set card title
     this._card.header = this._config.title;
+
+    // 
+    if ('_' in window && this._config.item_template) {
+      this._itemTemplate = _.template(this._config.item_template, {variable: 'item'});
+    } else {
+      this._itemTemplate = function (mixed) {
+        if (typeof mixed === 'object') {
+          let p = ['content', 'value', 'title', 'name'].find(prop =>  {
+            return prop in mixed && mixed[prop];
+          });
+          
+          return mixed[p] || (mixed + '');
+        } else {
+          return mixed + '';
+        }
+      };
+    }
 
     // Update styles
     this._updateStyle();    
